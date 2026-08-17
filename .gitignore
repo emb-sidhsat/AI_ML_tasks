@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+venv/
+
+# Data — raw and processed files are local, not versioned
+data/raw/*.csv
+data/processed/*.csv
+data/outputs/*.csv
+data/outputs/*.png
+
+# Model cache
+*.pkl
+*.joblib
+~/.cache/huggingface/
