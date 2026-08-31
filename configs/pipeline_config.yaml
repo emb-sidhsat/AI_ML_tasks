@@ -1,0 +1,171 @@
+# ============================================================
+# AEGIS NHTSA Early Warning System — Pipeline Configuration
+# Edit here, not in code. All tuneable constants in one place.
+# ============================================================
+
+# --- Data Ingestion ---
+ingestion:
+  years_to_target: [2016, 2017, 2018, 2019, 2020]
+  min_complaints: 10
+  max_models_per_make: 2
+  api_delay_seconds: 0.4
+  force_refetch: false
+
+# --- Preprocessing ---
+preprocessing:
+  min_word_count_after_clean: 5
+  keep_negations: ["not", "no", "never", "without", "none", "nobody"]
+
+# --- Keyword Scoring ---
+keyword_scoring:
+  baseline_score: 5.0
+  tier1_max_hits: 3
+  tier2_max_hits: 3
+  tier3_max_hits: 4
+  tier1_points: 20
+  tier2_points: 10
+  tier3_points: 3
+  hard_cap: 25.0
+  run_on_raw_text: true   # MUST be true — lemmatization breaks inflected keywords
+
+# --- Silver Labels (Weak Supervision) ---
+silver_labels:
+  # Threshold tightened from 25 → 15 to avoid boundary noise.
+  # A complaint scoring 15-24 on keywords is not cleanly non-critical.
+  non_critical_keyword_threshold: 15
+  non_critical_component_threshold: 40
+
+# --- TF-IDF ---
+tfidf:
+  max_features: 8000
+  ngram_range: [1, 2]
+  sublinear_tf: true
+  min_df: 2
+  max_df: 0.85
+
+# --- ML Classifier ---
+# LinearSVM best CV F1 (0.932 ± 0.006) vs LogReg (0.922 ± 0.007).
+# LogReg used as final model for predict_proba availability (Score-A).
+classifier:
+  final_model: "LogisticRegression"
+  logistic_regression:
+    C: 1.0
+    class_weight: "balanced"
+    max_iter: 1000
+  linear_svm:
+    C: 1.0
+    class_weight: "balanced"
+    max_iter: 2000
+
+# --- Score Architecture ---
+scores:
+  keyword_weight: 25
+  ml_ensemble_weight: 75
+  score_a_max: 25
+  score_b_max: 25
+  score_c_max: 25
+  # Category adjustment — produces ~20pt spread (was 6pt before fix)
+  category_adjustment:
+    safety_critical_bonus: 6    # BRAKE_SYSTEM, STEERING_LOSS, AIRBAG_DEFECT etc.
+    cosmetic_penalty: -10       # Pushes COSMETIC to 45-55 range
+    unknown_penalty: -2
+    neutral: 0                  # TRANSMISSION, STRUCTURAL
+
+# --- SBERT / Clustering ---
+sbert:
+  model_name: "all-MiniLM-L6-v2"
+  batch_size: 256
+  normalize_embeddings: true
+  # CRITICAL: Embed ALL complaints, not just high-score subset.
+  # Previous approach left 96% of complaints with sbert_cluster=-99,
+  # making sbert_cluster_rate vehicle feature effectively zero.
+  embed_full_corpus: true
+  umap:
+    n_components: 2
+    n_neighbors: 15
+    min_dist: 0.1
+    metric: "cosine"
+    random_state: 42
+  hdbscan:
+    # FIXED: was max(5, len//50) — produces ~1700 on 86K corpus, too large.
+    # Fixed min_cluster_size=25 gives 32 clusters with 92% high-score coverage.
+    min_cluster_size: 25
+    min_samples: 5
+    metric: "euclidean"
+    cluster_selection_method: "eom"
+
+# --- Zero-Shot Classification ---
+zero_shot:
+  model_name: "facebook/bart-large-mnli"
+  batch_size: 32
+  top_n_to_classify: 2000
+  min_text_words: 8
+  threshold: 65
+  # CAUTION: AIRBAG_DEFECT = 37% of seed → inflates to 41% after KNN transfer.
+  # This is partially real signal and partially BART-MNLI conflating crash severity
+  # with airbag defects. Monitor safety_category_rate per vehicle before trusting.
+  knn_transfer:
+    enabled: true
+    n_neighbors: 3
+    metric: "cosine"
+    confidence_discount: 0.6
+
+# --- Deduplication ---
+deduplication:
+  cosine_distance_threshold: 0.05   # <0.05 distance = >0.95 similarity = near-duplicate
+  # Found 3,181 near-duplicates (3.7%) in production run — attorney-filed batches
+  # and NHTSA template copy-paste confirmed at scale.
+
+# --- Temporal Anomaly Detection ---
+anomaly_detection:
+  contamination: 0.15
+  n_estimators: 50
+  min_complaints_for_anomaly: 8
+  min_months_for_anomaly: 4
+
+# --- Vehicle Aggregation ---
+vehicle_aggregation:
+  high_criticality_threshold: 60
+  cross_vehicle_min_makes: 3
+
+# --- Recall Labeling ---
+# CRITICAL FIX: Field name was 'recallDate' (does not exist in NHTSA API).
+# Correct field confirmed from API response: ReportReceivedDate.
+# Bug caused all temporal labels = 0 until fixed.
+#
+# FINDING: Mean lead time = -72 days (negative) because ReportReceivedDate
+# is the NHTSA admin date when the campaign was logged, which for
+# manufacturer-initiated voluntary recalls can predate consumer awareness
+# by 30-90 days. This does NOT refute the hypothesis — complaints continue
+# building AFTER recall opens because consumers haven't received remedy yet.
+#
+# SOLUTION: Bidirectional window — allow recall to precede complaint by
+# days_before (admin lag buffer) while extending days_after (full co-occurrence).
+recall_labeling:
+  recall_date_field: "ReportReceivedDate"   # Confirmed correct field name
+  days_after: 365     # Recall up to 1 year AFTER first complaint
+  days_before: 90     # Allow recall up to 90 days BEFORE first complaint (admin lag)
+  # Strict alternative: days_before=0, days_after=180 (original hypothesis)
+  # Result with strict: 115/315 recalled (36.5%)
+  # Result with bidirectional: ~200+/315 recalled
+
+# --- GBM Vehicle Scorer ---
+# Requires temporal labeling to produce non-zero recalls first.
+# Unblocked after ReportReceivedDate fix.
+gbm:
+  n_estimators: 200
+  max_depth: 4
+  learning_rate: 0.05
+  subsample: 0.8
+  min_samples_leaf: 3
+  random_state: 42
+  cv_folds: 5
+
+# --- Validation ---
+# PR-AUC is the primary metric given high base recall rate (~36-65%).
+# ROC-AUC is secondary. Both reported.
+validation:
+  primary_metric: "pr_auc"
+  top_k_precision: 20
+  significance_alpha: 0.05
+  min_vehicles_for_year_stratified: 5

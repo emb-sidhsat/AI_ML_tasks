@@ -1,17 +1,50 @@
+# Data files — never commit raw API pulls or large processed files
+data/raw/*.csv
+data/raw/*.json
+data/processed/*.csv
+data/processed/*.npy
+data/processed/*.pkl
+data/outputs/*.png
+data/outputs/*.csv
+
+# Keep directory structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/outputs/.gitkeep
+
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
-.env
-.venv/
+.eggs/
+dist/
+build/
+*.egg
+.Python
+
+# Virtual environments
 venv/
+env/
+.venv/
 
-# Data — raw and processed files are local, not versioned
-data/raw/*.csv
-data/processed/*.csv
-data/outputs/*.csv
-data/outputs/*.png
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
 
-# Model cache
-*.pkl
-*.joblib
-~/.cache/huggingface/
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model weights (large — use HuggingFace hub directly)
+*.safetensors
+*.bin
+models/
+
+# Secrets
+.env
+*.key

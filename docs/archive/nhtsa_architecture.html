@@ -1,0 +1,693 @@
+<title>NHTSA NLP Early Warning</title>
+
+<style>
+/* === TOKENS === */
+:root {
+  --bg: #F4F6FA;
+  --surface: #FFFFFF;
+  --surface-2: #EAF0F8;
+  --border: #C8D4E3;
+  --text: #0C1824;
+  --text-muted: #526070;
+  --text-faint: #98ABBE;
+
+  --c-data: #1959A8;
+  --c-data-bg: #EEF3FB;
+  --c-data-border: #B8CDE8;
+
+  --c-prep: #4C52A8;
+  --c-prep-bg: #F0F0FB;
+  --c-prep-border: #C0C2E8;
+
+  --c-rule: #B84C14;
+  --c-rule-bg: #FBF0E8;
+  --c-rule-border: #E0BCA0;
+
+  --c-ml: #6F2EAA;
+  --c-ml-bg: #F4EEFB;
+  --c-ml-border: #CEBAE8;
+
+  --c-sem: #0A8880;
+  --c-sem-bg: #E8F8F6;
+  --c-sem-border: #9ED6D0;
+
+  --c-agg: #246038;
+  --c-agg-bg: #EAF8EE;
+  --c-agg-border: #9ED4B0;
+
+  --c-valid: #906010;
+  --c-valid-bg: #FBF4E4;
+  --c-valid-border: #DEC890;
+
+  --connector: #B0BEC8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A1420;
+    --surface: #0F1E30;
+    --surface-2: #152840;
+    --border: #1C3050;
+    --text: #D8E8F6;
+    --text-muted: #6880A0;
+    --text-faint: #304860;
+
+    --c-data: #4888D8;
+    --c-data-bg: #0C1E38;
+    --c-data-border: #183458;
+
+    --c-prep: #7070D0;
+    --c-prep-bg: #0E0E38;
+    --c-prep-border: #181852;
+
+    --c-rule: #D86830;
+    --c-rule-bg: #28100A;
+    --c-rule-border: #481C0E;
+
+    --c-ml: #9858D8;
+    --c-ml-bg: #1C0830;
+    --c-ml-border: #300E52;
+
+    --c-sem: #16B8AE;
+    --c-sem-bg: #062820;
+    --c-sem-border: #0C4038;
+
+    --c-agg: #30B860;
+    --c-agg-bg: #062016;
+    --c-agg-border: #0E3820;
+
+    --c-valid: #D89028;
+    --c-valid-bg: #221606;
+    --c-valid-border: #3C280E;
+
+    --connector: #1C3050;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0A1420;
+  --surface: #0F1E30;
+  --surface-2: #152840;
+  --border: #1C3050;
+  --text: #D8E8F6;
+  --text-muted: #6880A0;
+  --text-faint: #304860;
+
+  --c-data: #4888D8;
+  --c-data-bg: #0C1E38;
+  --c-data-border: #183458;
+
+  --c-prep: #7070D0;
+  --c-prep-bg: #0E0E38;
+  --c-prep-border: #181852;
+
+  --c-rule: #D86830;
+  --c-rule-bg: #28100A;
+  --c-rule-border: #481C0E;
+
+  --c-ml: #9858D8;
+  --c-ml-bg: #1C0830;
+  --c-ml-border: #300E52;
+
+  --c-sem: #16B8AE;
+  --c-sem-bg: #062820;
+  --c-sem-border: #0C4038;
+
+  --c-agg: #30B860;
+  --c-agg-bg: #062016;
+  --c-agg-border: #0E3820;
+
+  --c-valid: #D89028;
+  --c-valid-bg: #221606;
+  --c-valid-border: #3C280E;
+
+  --connector: #1C3050;
+}
+
+/* === BASE === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 40px 20px 64px;
+}
+
+/* === PAGE === */
+.page { max-width: 960px; margin: 0 auto; }
+
+/* === HEADER === */
+.page-header {
+  text-align: center;
+  margin-bottom: 44px;
+}
+
+.eyebrow {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+.page-header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  text-wrap: balance;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* === PIPELINE === */
+.pipeline { display: flex; flex-direction: column; }
+
+/* === CONNECTOR === */
+.connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.connector-line {
+  width: 1px;
+  height: 18px;
+  background: var(--connector);
+}
+
+.connector-arrow {
+  color: var(--connector);
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* === PHASE === */
+.phase {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.phase-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.phase-num {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+}
+
+.phase-title {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.phase-concept {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-left: auto;
+}
+
+.phase-body { padding: 14px; }
+
+/* === COMPONENT CARDS === */
+.comp-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.comp {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 13px;
+  border-radius: 6px;
+  border: 1px solid;
+  flex: 1;
+  min-width: 180px;
+}
+
+.comp-title {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.comp-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.comp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.tag {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* === DATA PHASE === */
+.phase--data .phase-header { background: var(--c-data-bg); border-bottom-color: var(--c-data-border); }
+.phase--data .phase-num, .phase--data .phase-title { color: var(--c-data); }
+.phase--data .comp { background: var(--c-data-bg); border-color: var(--c-data-border); }
+.phase--data .comp-title { color: var(--c-data); }
+.phase--data .tag { background: var(--c-data); color: #fff; }
+
+/* === PREP PHASE === */
+.phase--prep .phase-header { background: var(--c-prep-bg); border-bottom-color: var(--c-prep-border); }
+.phase--prep .phase-num, .phase--prep .phase-title { color: var(--c-prep); }
+.phase--prep .comp { background: var(--c-prep-bg); border-color: var(--c-prep-border); }
+.phase--prep .comp-title { color: var(--c-prep); }
+.phase--prep .tag { background: var(--c-prep); color: #fff; }
+
+/* === NLP SCORING PHASE === */
+.phase--nlp .phase-header { background: var(--surface-2); }
+.phase--nlp .phase-num { color: var(--text-muted); }
+.phase--nlp .phase-title { color: var(--text); }
+
+.nlp-layers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.layer {
+  border-radius: 6px;
+  border: 1px solid;
+  overflow: hidden;
+}
+
+.layer-header {
+  padding: 8px 11px;
+  border-bottom: 1px solid;
+}
+
+.layer-num {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.layer-title {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+.layer-body { padding: 10px 11px; }
+
+.layer-item {
+  font-size: 12px;
+  padding: 2.5px 0;
+  color: var(--text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.layer-item::before {
+  content: '–';
+  flex-shrink: 0;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Layer 1 */
+.layer--rule { background: var(--c-rule-bg); border-color: var(--c-rule-border); }
+.layer--rule .layer-header { background: var(--c-rule-bg); border-bottom-color: var(--c-rule-border); }
+.layer--rule .layer-num, .layer--rule .layer-title { color: var(--c-rule); }
+.layer--rule .layer-item::before { color: var(--c-rule); }
+
+/* Layer 2 */
+.layer--ml { background: var(--c-ml-bg); border-color: var(--c-ml-border); }
+.layer--ml .layer-header { background: var(--c-ml-bg); border-bottom-color: var(--c-ml-border); }
+.layer--ml .layer-num, .layer--ml .layer-title { color: var(--c-ml); }
+.layer--ml .layer-item::before { color: var(--c-ml); }
+
+/* Layer 3 */
+.layer--sem { background: var(--c-sem-bg); border-color: var(--c-sem-border); }
+.layer--sem .layer-header { background: var(--c-sem-bg); border-bottom-color: var(--c-sem-border); }
+.layer--sem .layer-num, .layer--sem .layer-title { color: var(--c-sem); }
+.layer--sem .layer-item::before { color: var(--c-sem); }
+
+/* Composite output strip */
+.composite-out {
+  margin-top: 11px;
+  padding: 8px 13px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.composite-label {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.composite-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* === AGG PHASE === */
+.phase--agg .phase-header { background: var(--c-agg-bg); border-bottom-color: var(--c-agg-border); }
+.phase--agg .phase-num, .phase--agg .phase-title { color: var(--c-agg); }
+.phase--agg .comp { background: var(--c-agg-bg); border-color: var(--c-agg-border); }
+.phase--agg .comp-title { color: var(--c-agg); }
+.phase--agg .tag { background: var(--c-agg); color: #fff; }
+
+/* === VALIDATION PHASE === */
+.phase--valid .phase-header { background: var(--c-valid-bg); border-bottom-color: var(--c-valid-border); }
+.phase--valid .phase-num, .phase--valid .phase-title { color: var(--c-valid); }
+.phase--valid .comp { background: var(--c-valid-bg); border-color: var(--c-valid-border); }
+.phase--valid .comp-title { color: var(--c-valid); }
+.phase--valid .tag { background: var(--c-valid); color: #fff; }
+
+/* === TECH STACK === */
+.tech-stack {
+  margin-top: 28px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.tech-stack-title {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+.tech-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tech-chip {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 620px) {
+  .nlp-layers { grid-template-columns: 1fr; }
+  .comp-row { flex-direction: column; }
+  .phase-concept { display: none; }
+}
+</style>
+
+<div class="page">
+
+  <header class="page-header">
+    <div class="eyebrow">System Architecture</div>
+    <h1>NHTSA Early Warning System</h1>
+    <p class="subtitle">Complaints Precede Recalls — NLP-Driven Recall Prediction Pipeline</p>
+  </header>
+
+  <div class="pipeline">
+
+    <!-- ── Phase 1: Data Ingestion ── -->
+    <section class="phase phase--data">
+      <div class="phase-header">
+        <span class="phase-num">01</span>
+        <span class="phase-title">Data Ingestion</span>
+        <span class="phase-concept">Raw unstructured text from the wild</span>
+      </div>
+      <div class="phase-body">
+        <div class="comp-row">
+          <div class="comp">
+            <span class="comp-title">NHTSA Complaints API</span>
+            <span class="comp-detail">5 years of consumer complaint narratives per make/model/year. Vehicle catalogue built dynamically from API, filtered for cross-year consistency and complaint volume.</span>
+            <div class="comp-tags">
+              <span class="tag">complaintsByVehicle</span>
+              <span class="tag">2016–2020</span>
+            </div>
+          </div>
+          <div class="comp">
+            <span class="comp-title">Cache Layer</span>
+            <span class="comp-detail">FORCE_REFETCH flag controls API vs disk. CSVs written to data/raw/ to survive Colab session restarts and avoid rate limits.</span>
+            <div class="comp-tags">
+              <span class="tag">complaints_raw.csv</span>
+              <span class="tag">recalls_raw.csv</span>
+            </div>
+          </div>
+          <div class="comp">
+            <span class="comp-title">NHTSA Recalls API</span>
+            <span class="comp-detail">Ground-truth recall records for the same vehicle set. Used as binary labels (actually_recalled) during final validation.</span>
+            <div class="comp-tags">
+              <span class="tag">issueType=r</span>
+              <span class="tag">vehicle_key</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-arrow">▼</div>
+    </div>
+
+    <!-- ── Phase 2: Preprocessing ── -->
+    <section class="phase phase--prep">
+      <div class="phase-header">
+        <span class="phase-num">02</span>
+        <span class="phase-title">EDA &amp; Preprocessing</span>
+        <span class="phase-concept">Domain-aware vocabulary normalisation</span>
+      </div>
+      <div class="phase-body">
+        <div class="comp-row">
+          <div class="comp">
+            <span class="comp-title">Exploratory Audit</span>
+            <span class="comp-detail">Null rates, text lengths, vocabulary fragmentation analysis. Reveals why raw splits on brakes / brake / BRAKES / braking must be unified before any NLP.</span>
+          </div>
+          <div class="comp">
+            <span class="comp-title">Text Cleaning Pipeline</span>
+            <span class="comp-detail">Lowercase · punctuation removal · stopword filtering with negation preservation (not / no / never retained) · WordNet lemmatisation.</span>
+            <div class="comp-tags">
+              <span class="tag">NLTK</span>
+              <span class="tag">spaCy</span>
+            </div>
+          </div>
+          <div class="comp">
+            <span class="comp-title">Domain Expansions</span>
+            <span class="comp-detail">Automotive abbreviation normalisation. Compound term preservation (steering_wheel, check_engine). Numeric unit handling. Outputs text_clean column.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-arrow">▼</div>
+    </div>
+
+    <!-- ── Phase 3: NLP Scoring ── -->
+    <section class="phase phase--nlp">
+      <div class="phase-header">
+        <span class="phase-num">03</span>
+        <span class="phase-title">Criticality Scoring — 3 NLP Layers</span>
+        <span class="phase-concept">Progressively richer text representations</span>
+      </div>
+      <div class="phase-body">
+        <div class="nlp-layers">
+
+          <div class="layer layer--rule">
+            <div class="layer-header">
+              <div class="layer-num">Layer 1</div>
+              <div class="layer-title">Rule-Based</div>
+            </div>
+            <div class="layer-body">
+              <div class="layer-item">Tiered safety keyword matching (crash / fire / stall / rollaway)</div>
+              <div class="layer-item">Structured signal flags: crash, fire, injury, fatality</div>
+              <div class="layer-item">Component risk scoring — steering, brakes, airbag, fuel weighted by danger tier</div>
+              <div class="layer-item">Incident-to-filing date lag as urgency proxy</div>
+              <div class="layer-item">TF-IDF (unigrams + bigrams) for statistical text representation</div>
+            </div>
+          </div>
+
+          <div class="layer layer--ml">
+            <div class="layer-header">
+              <div class="layer-num">Layer 2</div>
+              <div class="layer-title">Classical ML</div>
+            </div>
+            <div class="layer-body">
+              <div class="layer-item">Silver labels from structured flags (weak supervision)</div>
+              <div class="layer-item">Naive Bayes → Logistic Regression → LinearSVC complexity ladder</div>
+              <div class="layer-item">5-fold stratified cross-validation scored by F1</div>
+              <div class="layer-item">Best model outputs ml_prob criticality score</div>
+              <div class="layer-item">Feature weight inspection for interpretability</div>
+            </div>
+          </div>
+
+          <div class="layer layer--sem">
+            <div class="layer-header">
+              <div class="layer-num">Layer 3</div>
+              <div class="layer-title">Semantic NLP</div>
+            </div>
+            <div class="layer-body">
+              <div class="layer-item">SBERT all-MiniLM-L6-v2 — 384-dim sentence embeddings</div>
+              <div class="layer-item">UMAP reduction to 2D (cosine metric, n_neighbors=15)</div>
+              <div class="layer-item">HDBSCAN density clustering — discovers defect mode groups without a preset k</div>
+              <div class="layer-item">Semantic similarity lookup for "have we seen this before?"</div>
+              <div class="layer-item">Zero-shot classification via facebook/bart-large-mnli</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="composite-out">
+          <span class="composite-label">↳ composite_score (0–100)</span>
+          <span class="composite-desc">Weighted combination of keyword score, ML probability, component risk, structured flags, and SBERT cluster depth.</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-arrow">▼</div>
+    </div>
+
+    <!-- ── Phase 4: Vehicle Aggregation ── -->
+    <section class="phase phase--agg">
+      <div class="phase-header">
+        <span class="phase-num">04</span>
+        <span class="phase-title">Vehicle Aggregation</span>
+        <span class="phase-concept">Complaint-level scores → vehicle-level recall risk</span>
+      </div>
+      <div class="phase-body">
+        <div class="comp-row">
+          <div class="comp">
+            <span class="comp-title">Temporal Features</span>
+            <span class="comp-detail">Monthly complaint volume, acceleration (6-month slope), date of first high-score complaint. Captures whether complaints are spiking.</span>
+          </div>
+          <div class="comp">
+            <span class="comp-title">Aggregate Signals</span>
+            <span class="comp-detail">Mean composite score · crash/injury/fatality rates · dominant zero-shot defect category · HDBSCAN cluster concentration per vehicle.</span>
+          </div>
+          <div class="comp">
+            <span class="comp-title">Recall Risk Score</span>
+            <span class="comp-detail">Weighted 0–100 recall risk per vehicle_key. Threshold-based tier assignment: Critical / High / Medium / Low.</span>
+            <div class="comp-tags">
+              <span class="tag">recall_risk_score</span>
+              <span class="tag">risk_tier</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="connector">
+      <div class="connector-line"></div>
+      <div class="connector-arrow">▼</div>
+    </div>
+
+    <!-- ── Phase 5: Validation ── -->
+    <section class="phase phase--valid">
+      <div class="phase-header">
+        <span class="phase-num">05</span>
+        <span class="phase-title">Validation</span>
+        <span class="phase-concept">Proving signal against historical recall reality</span>
+      </div>
+      <div class="phase-body">
+        <div class="comp-row">
+          <div class="comp">
+            <span class="comp-title">Rank Correlation</span>
+            <span class="comp-detail">Spearman ρ between recall_risk_score and actually_recalled. Tests whether higher scores monotonically predict real recalls.</span>
+            <div class="comp-tags"><span class="tag">scipy.stats</span></div>
+          </div>
+          <div class="comp">
+            <span class="comp-title">ROC-AUC</span>
+            <span class="comp-detail">Binary classification performance: recalled vs not-recalled at various thresholds. Benchmarked against keyword-only baseline.</span>
+            <div class="comp-tags"><span class="tag">sklearn.metrics</span></div>
+          </div>
+          <div class="comp">
+            <span class="comp-title">Timeline Case Study</span>
+            <span class="comp-detail">Monthly complaint volume for the highest-risk recalled vehicle. Visually confirms complaints precede the official recall date.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="tech-stack">
+    <div class="tech-stack-title">Dependencies</div>
+    <div class="tech-chips">
+      <span class="tech-chip">requests</span>
+      <span class="tech-chip">pandas</span>
+      <span class="tech-chip">numpy</span>
+      <span class="tech-chip">nltk</span>
+      <span class="tech-chip">spacy</span>
+      <span class="tech-chip">scikit-learn</span>
+      <span class="tech-chip">sentence-transformers</span>
+      <span class="tech-chip">transformers</span>
+      <span class="tech-chip">umap-learn</span>
+      <span class="tech-chip">hdbscan</span>
+      <span class="tech-chip">matplotlib</span>
+      <span class="tech-chip">seaborn</span>
+      <span class="tech-chip">scipy</span>
+      <span class="tech-chip">tqdm</span>
+    </div>
+  </div>
+
+</div>
