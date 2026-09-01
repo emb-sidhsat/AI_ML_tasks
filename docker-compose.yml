@@ -1,0 +1,53 @@
+# NHTSA Early Warning System — Docker Compose
+#
+# Usage examples:
+#   docker compose up pipeline               # full 5-phase pipeline
+#   PHASE=1 docker compose up pipeline       # ingest only
+#   PHASE=3 SKIP_SEMANTIC=true docker compose up pipeline  # score, no SBERT/BART
+#   docker compose run --rm tests            # run pytest
+#
+# Data produced by the container is written to ./data/ on your host machine.
+# The NHTSA models (SBERT, BART) are downloaded by the container on first run
+# and cached in the named volume 'hf_cache' so subsequent runs are instant.
+
+# Corporate-network build (SSL-inspection proxy blocks pypi.org / pytorch.org):
+#   PIP_INDEX_URL=https://jfrog.devstack.vwgroup.com/artifactory/api/pypi/pypi/simple/ \
+#   PIP_TRUSTED_HOST="jfrog.devstack.vwgroup.com" \
+#   docker compose build
+
+services:
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SKIP_HEAVY_ML: "false"   # set to "true" for a lite build without torch
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple/}
+        PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-}
+    image: nhtsa-early-warning:latest
+    environment:
+      PHASE: ${PHASE:-all}
+      SKIP_SEMANTIC: ${SKIP_SEMANTIC:-false}
+      FORCE_REFETCH: ${FORCE_REFETCH:-false}
+      NHTSA_BASE: ${NHTSA_BASE:-https://api.nhtsa.gov}
+      API_DELAY: ${API_DELAY:-0.5}
+      # Optional — pass your HuggingFace token to avoid anonymous download rate limits
+      # or to access private/gated models. Leave unset for public models.
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      # Bind-mount data/ so CSVs and charts land on your host after the run
+      - ./data:/app/data
+      # Named volume caches HuggingFace models between runs (~2 GB, one-time download)
+      - hf_cache:/app/.cache/huggingface
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nhtsa-early-warning:latest
+    # Override the ENTRYPOINT to run pytest instead of the pipeline
+    entrypoint: ["python", "-m", "pytest", "tests/", "-v"]
+
+volumes:
+  hf_cache:

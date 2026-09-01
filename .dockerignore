@@ -1,0 +1,43 @@
+# Version control
+.git/
+.gitignore
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Virtual environment — dependencies are installed inside the image
+.venv/
+venv/
+env/
+
+# Data — mounted as a volume at runtime; never bake API data into the image
+data/raw/*.csv
+data/raw/*.json
+data/processed/*.csv
+data/processed/*.npy
+data/processed/*.pkl
+data/outputs/*.png
+data/outputs/*.csv
+
+# Archive notebooks are large and not needed inside the container
+docs/archive/notebooks/
+
+# Model weights — pulled from HuggingFace at runtime
+*.safetensors
+*.bin
+models/
+
+# Secrets and local config
+.env
+*.key
+
+# IDE and OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

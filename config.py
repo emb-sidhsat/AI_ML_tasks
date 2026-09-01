@@ -1,14 +1,22 @@
 """
 Central configuration for the NHTSA Early Warning System.
 Edit this file to change years, catalogue size, scoring thresholds, or caching.
+
+Environment variable overrides (useful in Docker / CI):
+  FORCE_REFETCH=true      — always re-call the NHTSA API regardless of cached CSVs
+  NHTSA_BASE=<url>        — override API base (e.g. point at a mock server in tests)
+  API_DELAY=<seconds>     — override per-request polite delay (set 0 in tests)
 """
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).parent
 
 # ── NHTSA API ──────────────────────────────────────────────────────────────
-NHTSA_BASE = "https://api.nhtsa.gov"
-API_DELAY  = 0.5   # seconds between requests (be polite to the public API)
+# Both overridable via env var: point NHTSA_BASE at a mock server in tests,
+# set API_DELAY=0 in CI to skip polite delays.
+NHTSA_BASE = os.getenv("NHTSA_BASE", "https://api.nhtsa.gov")
+API_DELAY  = float(os.getenv("API_DELAY", "0.5"))
 
 # ── Vehicle Catalogue ──────────────────────────────────────────────────────
 YEARS_TO_TARGET = [2016, 2017, 2018, 2019, 2020]
@@ -24,7 +32,8 @@ ZS_MAX_COMPLAINTS    = 800   # runtime cap on zero-shot (BART-MNLI is slow on CP
 COMPOSITE_CRITICAL = 60      # complaints above this are "critical" in aggregation
 
 # ── Caching ────────────────────────────────────────────────────────────────
-FORCE_REFETCH = False   # True → always call API; False → use cached CSVs if present
+# Read from env var so Docker / CI can override without rebuilding the image
+FORCE_REFETCH = os.getenv("FORCE_REFETCH", "false").lower() == "true"
 
 # ── Data Paths ─────────────────────────────────────────────────────────────
 DATA_RAW       = ROOT / "data" / "raw"

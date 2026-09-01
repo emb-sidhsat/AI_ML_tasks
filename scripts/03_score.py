@@ -7,6 +7,7 @@ Set SKIP_SEMANTIC=True below to run only Layers 1 & 2.
 
 Run: python scripts/03_score.py
 """
+import os
 import sys
 import pandas as pd
 from pathlib import Path
@@ -20,7 +21,8 @@ from src.scoring.layer2_ml import train_and_evaluate, apply_ml_scoring, build_fi
 from src.scoring.layer3_semantic import encode_complaints, cluster_embeddings, apply_zero_shot
 import config
 
-SKIP_SEMANTIC = False   # set True to skip SBERT/BART (faster, no large downloads)
+# Controlled by SKIP_SEMANTIC env var so Docker lite builds skip the 2 GB model downloads
+SKIP_SEMANTIC = os.getenv("SKIP_SEMANTIC", "false").lower() == "true"
 
 
 def main() -> None:

@@ -4,6 +4,7 @@ import pytest
 from src.scoring.structured_signals import compute_score_b
 
 
+
 def _make_row(**kwargs):
     defaults = {
         "has_crash": 0, "has_fire": 0, "has_injury": 0, "has_fatality": 0,
@@ -35,3 +36,16 @@ def test_no_signals_is_low():
     row = _make_row()
     score = compute_score_b(row)
     assert score < 5
+
+
+def test_fire_adds_to_crash():
+    crash_only = compute_score_b(_make_row(has_crash=1))
+    fire_and_crash = compute_score_b(_make_row(has_crash=1, has_fire=1))
+    assert fire_and_crash > crash_only
+
+
+def test_multiple_deaths_scores_higher_than_zero_deaths():
+    """numberOfDeaths path (has_fatality=0 branch) must accumulate correctly."""
+    zero = compute_score_b(_make_row(numberOfDeaths=0))
+    two  = compute_score_b(_make_row(numberOfDeaths=2))
+    assert two > zero

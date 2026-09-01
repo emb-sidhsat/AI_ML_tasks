@@ -3,6 +3,17 @@ import pytest
 from src.scoring.keyword_scorer import keyword_score
 
 
+@pytest.mark.parametrize("text,lo,hi", [
+    ("fire death fatality brake failure",         20, 25),  # T1 dominated, cap=25
+    ("crash accident collision injury",            5, 25),  # T2 heavy
+    ("failed failure malfunction broken defect",   5, 18),  # T3 only
+    ("the radio cuts out sometimes",               5,  6),  # no keywords
+    ("",                                           5,  5),  # empty → baseline
+])
+def test_score_ranges(text, lo, hi):
+    result = keyword_score(text)
+    assert lo <= result["score"] <= hi
+
 def test_baseline_score_on_empty():
     result = keyword_score("")
     assert result["score"] == 5.0
