@@ -35,7 +35,14 @@ COMPOSITE_CRITICAL = 60      # complaints above this are "critical" in aggregati
 # Read from env var so Docker / CI can override without rebuilding the image
 FORCE_REFETCH = os.getenv("FORCE_REFETCH", "false").lower() == "true"
 
-# ── Data Paths ─────────────────────────────────────────────────────────────
-DATA_RAW       = ROOT / "data" / "raw"
-DATA_PROCESSED = ROOT / "data" / "processed"
-DATA_OUTPUTS   = ROOT / "data" / "outputs"
+# ── Data Lake Paths ────────────────────────────────────────────────────────
+# Bronze preserves API extracts; Silver contains cleaned and scored records;
+# Gold contains vehicle-level products and validation artifacts.
+DATA_BRONZE = ROOT / "data" / "bronze"
+DATA_SILVER = ROOT / "data" / "silver"
+DATA_GOLD   = ROOT / "data" / "gold"
+
+# Compatibility aliases for modules outside the pipeline scripts.
+DATA_RAW       = DATA_BRONZE
+DATA_PROCESSED = DATA_SILVER
+DATA_OUTPUTS   = DATA_GOLD

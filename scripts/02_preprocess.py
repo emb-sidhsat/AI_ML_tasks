@@ -18,7 +18,7 @@ import config
 def main() -> None:
     print("── Phase 2: EDA & Preprocessing ──\n")
 
-    df = pd.read_csv(config.DATA_RAW / "complaints_raw.csv")
+    df = pd.read_csv(config.DATA_BRONZE / "complaints_raw.csv")
     print(f"Loaded {len(df):,} complaints\n")
 
     print("Step 1/3  EDA audit...")
@@ -30,8 +30,8 @@ def main() -> None:
     print("\nStep 3/3  Apply preprocessing pipeline...")
     df_clean = apply_preprocessing(df, text_col="summary")
 
-    config.DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
-    out = config.DATA_PROCESSED / "complaints_cleaned.csv"
+    config.DATA_SILVER.mkdir(parents=True, exist_ok=True)
+    out = config.DATA_SILVER / "complaints_cleaned.csv"
     df_clean.to_csv(out, index=False)
     print(f"\nPhase 2 complete. Saved → {out}")
 

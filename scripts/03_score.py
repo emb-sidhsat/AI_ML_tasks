@@ -28,7 +28,7 @@ SKIP_SEMANTIC = os.getenv("SKIP_SEMANTIC", "false").lower() == "true"
 def main() -> None:
     print("── Phase 3: Criticality Scoring ──\n")
 
-    df = pd.read_csv(config.DATA_PROCESSED / "complaints_cleaned.csv")
+    df = pd.read_csv(config.DATA_SILVER / "complaints_cleaned.csv")
     print(f"Loaded {len(df):,} cleaned complaints\n")
 
     # ── Layer 1: Rule-Based ──────────────────────────────────────────
@@ -61,8 +61,8 @@ def main() -> None:
             if col in df_high.columns:
                 df[col] = df.index.map(df_high[col])
 
-    config.DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
-    out = config.DATA_PROCESSED / "complaints_scored.csv"
+    config.DATA_SILVER.mkdir(parents=True, exist_ok=True)
+    out = config.DATA_SILVER / "complaints_scored.csv"
     df.to_csv(out, index=False)
     print(f"\nPhase 3 complete. Saved → {out}")
 

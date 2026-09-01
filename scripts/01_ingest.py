@@ -31,8 +31,8 @@ def main() -> None:
     print(f"Total recalls: {len(df_recalls):,}\n")
 
     print("Phase 1 complete.")
-    print(f"  {config.DATA_RAW}/complaints_raw.csv")
-    print(f"  {config.DATA_RAW}/recalls_raw.csv")
+    print(f"  {config.DATA_BRONZE}/complaints_raw.csv")
+    print(f"  {config.DATA_BRONZE}/recalls_raw.csv")
 
 
 if __name__ == "__main__":

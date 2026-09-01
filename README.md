@@ -66,11 +66,11 @@ Each phase can also be run standalone: `python scripts/01_ingest.py`
 
 | Phase | Script | What Runs | Key Outputs |
 |---|---|---|---|
-| **1 · Ingestion** | `01_ingest.py` | Dynamic vehicle catalogue from NHTSA makes/models API; cache-aware complaints + recalls fetch | `data/raw/complaints_raw.csv`, `recalls_raw.csv` — 85,998 complaints, 1,320 recalls |
-| **2 · Preprocessing** | `02_preprocess.py` | EDA vocabulary audit; 9-step domain-aware text cleaner (lowercase → punct removal → negation-preserving stopwords → WordNet lemmatisation → automotive expansion) | `data/processed/complaints_cleaned.csv` + `text_clean` column; 67.8% vocab reduction |
-| **3 · Scoring** | `03_score.py` | Three nested NLP layers (see below) | `data/processed/complaints_scored.csv` |
-| **4 · Aggregation** | `04_aggregate.py` | 15-feature vehicle aggregation; hand-tuned recall risk formula; set-membership recall labeling against `recalls_raw.csv` | `data/outputs/vehicle_risk.csv` + `recall_risk_score` (0–100), `risk_tier`, `actually_recalled` |
-| **5 · Validation** | `05_validate.py` | Spearman rank correlation, ROC-AUC curve, score distribution chart, timeline case study, top-15 risk ranking | Charts saved to `data/outputs/` |
+| **1 · Ingestion** | `01_ingest.py` | Dynamic vehicle catalogue from NHTSA makes/models API; cache-aware complaints + recalls fetch | Bronze: `data/bronze/complaints_raw.csv`, `recalls_raw.csv` — raw API extracts |
+| **2 · Preprocessing** | `02_preprocess.py` | EDA vocabulary audit; 9-step domain-aware text cleaner (lowercase → punct removal → negation-preserving stopwords → WordNet lemmatisation → automotive expansion) | Silver: `data/silver/complaints_cleaned.csv` + `text_clean` column |
+| **3 · Scoring** | `03_score.py` | Three nested NLP layers (see below) | Silver: `data/silver/complaints_scored.csv` |
+| **4 · Aggregation** | `04_aggregate.py` | 15-feature vehicle aggregation; hand-tuned recall risk formula; set-membership recall labeling against `recalls_raw.csv` | Gold: `data/gold/vehicle_risk.csv` + `recall_risk_score` (0–100), `risk_tier`, `actually_recalled` |
+| **5 · Validation** | `05_validate.py` | Spearman rank correlation, ROC-AUC curve, score distribution chart, timeline case study, top-15 risk ranking | Gold: charts saved to `data/gold/` |
 
 ### Phase 3 — Three Scoring Layers
 

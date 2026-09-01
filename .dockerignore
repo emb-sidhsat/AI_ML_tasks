@@ -15,14 +15,10 @@ build/
 venv/
 env/
 
-# Data — mounted as a volume at runtime; never bake API data into the image
-data/raw/*.csv
-data/raw/*.json
-data/processed/*.csv
-data/processed/*.npy
-data/processed/*.pkl
-data/outputs/*.png
-data/outputs/*.csv
+# Data lake — mounted at runtime; never bake generated datasets into the image
+data/bronze/
+data/silver/
+data/gold/
 
 # Archive notebooks are large and not needed inside the container
 docs/archive/notebooks/

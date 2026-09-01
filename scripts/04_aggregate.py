@@ -17,14 +17,14 @@ import config
 def main() -> None:
     print("── Phase 4: Vehicle Aggregation ──\n")
 
-    df          = pd.read_csv(config.DATA_PROCESSED / "complaints_scored.csv")
-    df_recalls  = pd.read_csv(config.DATA_RAW / "recalls_raw.csv")
+    df          = pd.read_csv(config.DATA_SILVER / "complaints_scored.csv")
+    df_recalls  = pd.read_csv(config.DATA_BRONZE / "recalls_raw.csv")
     print(f"Loaded {len(df):,} scored complaints · {len(df_recalls):,} recall records\n")
 
     df_vehicles = aggregate_to_vehicles(df, df_recalls)
 
-    config.DATA_OUTPUTS.mkdir(parents=True, exist_ok=True)
-    out = config.DATA_OUTPUTS / "vehicle_risk.csv"
+    config.DATA_GOLD.mkdir(parents=True, exist_ok=True)
+    out = config.DATA_GOLD / "vehicle_risk.csv"
     df_vehicles.to_csv(out, index=False)
 
     print(f"\nTop 10 vehicles by recall risk:")

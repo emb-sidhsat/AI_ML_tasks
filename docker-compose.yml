@@ -6,7 +6,7 @@
 #   PHASE=3 SKIP_SEMANTIC=true docker compose up pipeline  # score, no SBERT/BART
 #   docker compose run --rm tests            # run pytest
 #
-# Data produced by the container is written to ./data/ on your host machine.
+# Bronze, Silver, and Gold data produced by the container is written to ./data/ on your host machine.
 # The NHTSA models (SBERT, BART) are downloaded by the container on first run
 # and cached in the named volume 'hf_cache' so subsequent runs are instant.
 
@@ -36,7 +36,7 @@ services:
       # or to access private/gated models. Leave unset for public models.
       HF_TOKEN: ${HF_TOKEN:-}
     volumes:
-      # Bind-mount data/ so CSVs and charts land on your host after the run
+      # Bind-mount the data lake so all stage artifacts land on the host
       - ./data:/app/data
       # Named volume caches HuggingFace models between runs (~2 GB, one-time download)
       - hf_cache:/app/.cache/huggingface
