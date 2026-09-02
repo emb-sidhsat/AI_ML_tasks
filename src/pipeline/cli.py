@@ -1,6 +1,7 @@
 """Command-line interface for standalone pipeline stages."""
 import argparse
 
+from src.pipeline.logging_config import configure_logging
 from src.pipeline.runner import run_all, run_phase
 
 COMMANDS = {
@@ -20,6 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
+    configure_logging()
     args = build_parser().parse_args(argv)
     if args.command == "run-all":
         run_all(skip_semantic=args.skip_semantic)

@@ -3,6 +3,7 @@ Phase 1 — Data Ingestion: Recalls
 Ground-truth recall records used as labels during validation.
 """
 import re
+import logging
 import sys
 import time
 import warnings
@@ -16,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parents[2]))
 import config
 
 warnings.filterwarnings("ignore", message=".*Unverified HTTPS request.*")
+logger = logging.getLogger(__name__)
 
 
 def _normalise(s: str) -> str:
@@ -38,8 +40,7 @@ def fetch_recalls_for_vehicle(make: str, model: str) -> list[dict]:
             )
             if resp.status_code != 200:
                 failures += 1
-                print(f"  WARNING recall request failed for {make} {model} {year}: "
-                      f"HTTP {resp.status_code} — {resp.text[:160]}")
+                logger.warning("Recall request failed for %s %s %s: HTTP %s - %s", make, model, year, resp.status_code, resp.text[:160])
                 continue
             results = resp.json().get("results", [])
             for r in results:
@@ -49,8 +50,7 @@ def fetch_recalls_for_vehicle(make: str, model: str) -> list[dict]:
             rows.extend(results)
         except requests.RequestException as exc:
             failures += 1
-            print(f"  WARNING recall request failed for {make} {model} {year}: "
-                  f"{type(exc).__name__}: {exc}")
+            logger.warning("Recall request failed for %s %s %s: %s: %s", make, model, year, type(exc).__name__, exc)
         time.sleep(config.API_DELAY)
     if failures == len(config.YEARS_TO_TARGET) and failures:
         raise RuntimeError(f"Recall API failed for every target year for {make} {model}")
@@ -66,16 +66,16 @@ def load_or_fetch_recalls(vehicles: list[tuple[str, str]]) -> pd.DataFrame:
         except pd.errors.EmptyDataError:
             cached = None
         if cached is not None:
-            print(f"[cache] recalls_raw.csv → {len(cached):,} rows")
+            logger.info("Cache hit: %s (%s rows)", cache, f"{len(cached):,}")
             return cached
-        print("[cache] recalls_raw.csv is empty or malformed; refetching")
+        logger.warning("Cache %s is empty or malformed; refetching", cache)
 
     all_rows: list[dict] = []
     for make, model in tqdm(vehicles, desc="Fetching recalls"):
         try:
             rows = fetch_recalls_for_vehicle(make, model)
         except RuntimeError as exc:
-            print(f"  WARNING skipping {make} {model}: {exc}")
+            logger.warning("Skipping %s %s: %s", make, model, exc)
             continue
         all_rows.extend(rows)
 
@@ -88,5 +88,5 @@ def load_or_fetch_recalls(vehicles: list[tuple[str, str]]) -> pd.DataFrame:
         )
     config.DATA_RAW.mkdir(parents=True, exist_ok=True)
     df.to_csv(cache, index=False)
-    print(f"\n[saved] {len(df):,} recalls → {cache}")
+    logger.info("Saved %s recalls to %s", f"{len(df):,}", cache)
     return df

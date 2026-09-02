@@ -12,10 +12,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
+from src.pipeline.logging_config import configure_logging
 from src.pipeline.runner import run_all
 
 
 def main() -> None:
+    configure_logging()
     run_all()
 
 

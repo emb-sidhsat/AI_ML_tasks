@@ -1,9 +1,12 @@
 """Callable implementations of the five NHTSA pipeline stages."""
+import logging
 import os
 
 import pandas as pd
 
 import config
+
+logger = logging.getLogger(__name__)
 
 
 def run_ingestion() -> None:
@@ -11,21 +14,19 @@ def run_ingestion() -> None:
     from src.ingestion.complaints import build_vehicle_catalogue, load_or_fetch_complaints
     from src.ingestion.recalls import load_or_fetch_recalls
 
-    print("-- Phase 1: Data Ingestion --\n")
-    print("Step 1/3  Build vehicle catalogue from NHTSA API...")
+    logger.info("Phase 1: Data Ingestion")
+    logger.info("Step 1/3: Build vehicle catalogue from NHTSA API")
     vehicles = build_vehicle_catalogue()
-    print(f"Catalogue: {len(vehicles)} vehicle (make, model) pairs\n")
+    logger.info("Catalogue: %d vehicle (make, model) pairs", len(vehicles))
 
-    print("Step 2/3  Fetch complaints...")
+    logger.info("Step 2/3: Fetch complaints")
     complaints = load_or_fetch_complaints(vehicles)
-    print(f"Total complaints: {len(complaints):,}\n")
+    logger.info("Total complaints: %s", f"{len(complaints):,}")
 
-    print("Step 3/3  Fetch recalls (ground-truth labels)...")
+    logger.info("Step 3/3: Fetch recalls (ground-truth labels)")
     recalls = load_or_fetch_recalls(vehicles)
-    print(f"Total recalls: {len(recalls):,}\n")
-    print("Phase 1 complete.")
-    print(f"  {config.DATA_BRONZE}/complaints_raw.csv")
-    print(f"  {config.DATA_BRONZE}/recalls_raw.csv")
+    logger.info("Total recalls: %s", f"{len(recalls):,}")
+    logger.info("Phase 1 complete. Bronze files: %s", config.DATA_BRONZE)
 
 
 def run_preprocessing() -> None:
@@ -33,19 +34,19 @@ def run_preprocessing() -> None:
     from src.preprocessing.eda import audit_complaints, sample_complaints
     from src.preprocessing.pipeline import apply_preprocessing
 
-    print("-- Phase 2: EDA & Preprocessing --\n")
+    logger.info("Phase 2: EDA & Preprocessing")
     complaints = pd.read_csv(config.DATA_BRONZE / "complaints_raw.csv")
-    print(f"Loaded {len(complaints):,} complaints\n")
-    print("Step 1/3  EDA audit...")
+    logger.info("Loaded %s complaints", f"{len(complaints):,}")
+    logger.info("Step 1/3: EDA audit")
     audit_complaints(complaints)
-    print("\nStep 2/3  Sample raw complaints (read these before preprocessing)...")
+    logger.info("Step 2/3: Sample raw complaints")
     sample_complaints(complaints, n=3)
-    print("\nStep 3/3  Apply preprocessing pipeline...")
+    logger.info("Step 3/3: Apply preprocessing pipeline")
     cleaned = apply_preprocessing(complaints, text_col="summary")
     config.DATA_SILVER.mkdir(parents=True, exist_ok=True)
     output = config.DATA_SILVER / "complaints_cleaned.csv"
     cleaned.to_csv(output, index=False)
-    print(f"\nPhase 2 complete. Saved -> {output}")
+    logger.info("Phase 2 complete. Saved -> %s", output)
 
 
 def run_scoring(skip_semantic: bool | None = None) -> None:

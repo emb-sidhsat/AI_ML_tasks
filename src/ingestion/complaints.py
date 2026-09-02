@@ -3,6 +3,7 @@ Phase 1 — Data Ingestion: Complaints
 Fetches NHTSA consumer complaint narratives with disk caching.
 """
 import re
+import logging
 import sys
 import time
 import warnings
@@ -16,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parents[2]))
 import config
 
 warnings.filterwarnings("ignore", message=".*Unverified HTTPS request.*")
+logger = logging.getLogger(__name__)
 
 
 def fetch_makes(year: int, issue_type: str = "c") -> list[str]:
@@ -50,9 +52,9 @@ def build_vehicle_catalogue() -> list[tuple[str, str]]:
       2. Exceed MIN_COMPLAINTS in the probe year (sufficient volume).
     Capped at MAX_VEHICLES to keep the full pipeline tractable.
     """
-    print(f"Discovering makes for {config.PROBE_YEAR}...")
+    logger.info("Discovering makes for %s", config.PROBE_YEAR)
     makes = fetch_makes(config.PROBE_YEAR)
-    print(f"  Found {len(makes)} makes")
+    logger.info("Found %d makes", len(makes))
 
     # Find models present across all target years
     consistent_pairs: list[tuple[str, str]] = []
@@ -65,7 +67,7 @@ def build_vehicle_catalogue() -> list[tuple[str, str]]:
         for model in consistent:
             consistent_pairs.append((make, model))
 
-    print(f"  {len(consistent_pairs)} (make, model) pairs with consistent cross-year coverage")
+    logger.info("%d (make, model) pairs with consistent cross-year coverage", len(consistent_pairs))
 
     # Volume filter: keep only pairs with enough complaints in probe year
     rows = []
@@ -77,7 +79,7 @@ def build_vehicle_catalogue() -> list[tuple[str, str]]:
     df = pd.DataFrame(rows).sort_values("complaints", ascending=False)
     top = df.head(config.MAX_VEHICLES)
     catalogue = list(zip(top["make"], top["model"]))
-    print(f"  Final catalogue: {len(catalogue)} vehicles (≥{config.MIN_COMPLAINTS} complaints, top {config.MAX_VEHICLES})")
+    logger.info("Final catalogue: %d vehicles (at least %d complaints, top %d)", len(catalogue), config.MIN_COMPLAINTS, config.MAX_VEHICLES)
     return catalogue
 
 
@@ -98,7 +100,7 @@ def load_or_fetch_complaints(vehicles: list[tuple[str, str]]) -> pd.DataFrame:
     """Load from cache if available; otherwise fetch from NHTSA API and cache."""
     cache = config.DATA_RAW / "complaints_raw.csv"
     if cache.exists() and not config.FORCE_REFETCH:
-        print(f"[cache] complaints_raw.csv → {len(pd.read_csv(cache)):,} rows")
+        logger.info("Cache hit: %s (%s rows)", cache, f"{len(pd.read_csv(cache)):,}")
         return pd.read_csv(cache)
 
     all_rows: list[dict] = []
@@ -116,5 +118,5 @@ def load_or_fetch_complaints(vehicles: list[tuple[str, str]]) -> pd.DataFrame:
         )
     config.DATA_RAW.mkdir(parents=True, exist_ok=True)
     df.to_csv(cache, index=False)
-    print(f"\n[saved] {len(df):,} complaints → {cache}")
+    logger.info("Saved %s complaints to %s", f"{len(df):,}", cache)
     return df

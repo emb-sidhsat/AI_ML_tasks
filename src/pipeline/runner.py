@@ -1,5 +1,9 @@
 """Phase dispatch utilities shared by the CLI, scripts, and Docker entrypoint."""
+import logging
+
 from src.pipeline import stages
+
+logger = logging.getLogger(__name__)
 
 PHASES: dict[str, tuple[str, str]] = {
     "1": ("Phase 1: Data Ingestion", "run_ingestion"),
@@ -24,12 +28,8 @@ def run_phase(phase: str | int, *, skip_semantic: bool | None = None) -> None:
 
 def run_all(*, skip_semantic: bool | None = None) -> None:
     """Run all pipeline phases in their dependency order."""
-    print("=" * 60)
-    print("NHTSA Early Warning System - Full Pipeline")
-    print("=" * 60)
+    logger.info("NHTSA Early Warning System - Full Pipeline")
     for phase_id, (description, _) in PHASES.items():
-        print(f"\n{'=' * 60}\n{description}\n{'=' * 60}")
+        logger.info("Starting %s", description)
         run_phase(phase_id, skip_semantic=skip_semantic)
-    print("\n" + "=" * 60)
-    print("Pipeline complete. Results in data/gold/")
-    print("=" * 60)
+    logger.info("Pipeline complete. Results in data/gold/")
