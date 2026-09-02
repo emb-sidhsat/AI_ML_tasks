@@ -13,10 +13,13 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 
 # ── NHTSA API ──────────────────────────────────────────────────────────────
-# Both overridable via env var: point NHTSA_BASE at a mock server in tests,
-# set API_DELAY=0 in CI to skip polite delays.
+# Overridable via env vars:
+#   NHTSA_BASE — point at a mock server in tests
+#   API_DELAY — per-request polite delay (set 0 in CI)
+#   NHTSA_API_VERIFY_SSL — disable for corporate proxies with self-signed certs (not recommended)
 NHTSA_BASE = os.getenv("NHTSA_BASE", "https://api.nhtsa.gov")
 API_DELAY  = float(os.getenv("API_DELAY", "0.5"))
+NHTSA_API_VERIFY_SSL = os.getenv("NHTSA_API_VERIFY_SSL", "true").lower() != "false"
 
 # ── Vehicle Catalogue ──────────────────────────────────────────────────────
 YEARS_TO_TARGET = [2016, 2017, 2018, 2019, 2020]

@@ -61,8 +61,18 @@ nhtsa-early-warning/
 
 ## Pipeline — 5 Phases
 
-Run the full pipeline: `python scripts/run_all.py`  
-Each phase can also be run standalone: `python scripts/01_ingest.py`
+Run the full pipeline: `python -m src.pipeline.cli run-all`.
+Run individual stages with `ingest`, `preprocess`, `score`, `aggregate`, or `validate`:
+
+```bash
+python -m src.pipeline.cli ingest
+python -m src.pipeline.cli preprocess
+python -m src.pipeline.cli score --skip-semantic
+python -m src.pipeline.cli aggregate
+python -m src.pipeline.cli validate
+```
+
+The numbered scripts remain supported compatibility entry points, such as `python scripts/01_ingest.py`.
 
 | Phase | Script | What Runs | Key Outputs |
 |---|---|---|---|
@@ -80,7 +90,7 @@ Each phase can also be run standalone: `python scripts/01_ingest.py`
 | **L2 · Classical ML** | `scoring/layer2_ml.py` | Silver labels from safety flags; 5-fold stratified CV across NaiveBayes → LogReg → LinearSVC (CalibratedClassifierCV); auto-selects best model; TF-IDF 10K features + bigrams | `ml_score` (0–100), `composite_score` (final ML-enhanced composite, 0–100) |
 | **L3 · Semantic** | `scoring/layer3_semantic.py` | SBERT `all-MiniLM-L6-v2` encodes high-score subset (`composite_score_v1 > 45`); UMAP 384D→2D; HDBSCAN (`min_cluster_size=15`); BART-MNLI zero-shot on top-800 above score threshold | `sbert_cluster`, `sbert_is_clustered`, `sbert_cluster_size`, `zs_category`, `zs_confidence` |
 
-> **Skip semantic layer:** set `SKIP_SEMANTIC = True` in `scripts/03_score.py` to skip SBERT + BART-MNLI (~2 GB downloads).
+> **Skip semantic layer:** use `python -m src.pipeline.cli score --skip-semantic`, or set `SKIP_SEMANTIC=true` for script and Docker runs, to skip SBERT + BART-MNLI (~2 GB downloads).
 
 ---
 
@@ -141,8 +151,8 @@ pip install -r requirements.txt
 # Run tests
 pytest tests/ -v
 
-# Key config
-cat configs/pipeline_config.yaml
+# Run one pipeline stage
+python -m src.pipeline.cli ingest
 ```
 
 **Active configuration (`config.py`):**

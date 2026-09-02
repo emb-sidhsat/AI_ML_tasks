@@ -3,20 +3,25 @@ Phase 1 — Data Ingestion: Complaints
 Fetches NHTSA consumer complaint narratives with disk caching.
 """
 import re
-import time
-import requests
-import pandas as pd
 import sys
+import time
+import warnings
 from pathlib import Path
+
+import pandas as pd
+import requests
+from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 import config
+
+warnings.filterwarnings("ignore", message=".*Unverified HTTPS request.*")
 
 
 def fetch_makes(year: int, issue_type: str = "c") -> list[str]:
     """All vehicle makes that have complaint data for a given model year."""
     url  = f"{config.NHTSA_BASE}/products/vehicle/makes"
-    resp = requests.get(url, params={"modelYear": year, "issueType": issue_type}, timeout=15)
+    resp = requests.get(url, params={"modelYear": year, "issueType": issue_type}, timeout=15, verify=config.NHTSA_API_VERIFY_SSL)
     resp.raise_for_status()
     return [m["make"] for m in resp.json().get("results", [])]
 
@@ -24,7 +29,7 @@ def fetch_makes(year: int, issue_type: str = "c") -> list[str]:
 def fetch_models_for_make_year(make: str, year: int) -> list[str]:
     """All models with complaint data for a given make and model year."""
     url  = f"{config.NHTSA_BASE}/products/vehicle/models"
-    resp = requests.get(url, params={"make": make, "modelYear": year, "issueType": "c"}, timeout=15)
+    resp = requests.get(url, params={"make": make, "modelYear": year, "issueType": "c"}, timeout=15, verify=config.NHTSA_API_VERIFY_SSL)
     resp.raise_for_status()
     time.sleep(config.API_DELAY)
     return [m["model"] for m in resp.json().get("results", [])]
@@ -32,7 +37,7 @@ def fetch_models_for_make_year(make: str, year: int) -> list[str]:
 
 def _complaint_count(make: str, model: str, year: int) -> int:
     url  = f"{config.NHTSA_BASE}/complaints/complaintsByVehicle"
-    resp = requests.get(url, params={"make": make, "model": model, "modelYear": year}, timeout=15)
+    resp = requests.get(url, params={"make": make, "model": model, "modelYear": year}, timeout=15, verify=config.NHTSA_API_VERIFY_SSL)
     resp.raise_for_status()
     time.sleep(config.API_DELAY)
     return len(resp.json().get("results", []))
@@ -51,7 +56,7 @@ def build_vehicle_catalogue() -> list[tuple[str, str]]:
 
     # Find models present across all target years
     consistent_pairs: list[tuple[str, str]] = []
-    for make in makes:
+    for make in tqdm(makes, desc="Checking models across years"):
         model_sets = []
         for year in config.YEARS_TO_TARGET:
             models = set(fetch_models_for_make_year(make, year))
@@ -64,7 +69,7 @@ def build_vehicle_catalogue() -> list[tuple[str, str]]:
 
     # Volume filter: keep only pairs with enough complaints in probe year
     rows = []
-    for make, model in consistent_pairs:
+    for make, model in tqdm(consistent_pairs, desc="Filtering by complaint volume"):
         count = _complaint_count(make, model, config.PROBE_YEAR)
         if count >= config.MIN_COMPLAINTS:
             rows.append({"make": make, "model": model, "complaints": count})
@@ -78,7 +83,7 @@ def build_vehicle_catalogue() -> list[tuple[str, str]]:
 
 def fetch_complaints_for_vehicle(make: str, model: str, year: int) -> list[dict]:
     url    = f"{config.NHTSA_BASE}/complaints/complaintsByVehicle"
-    resp   = requests.get(url, params={"make": make, "model": model, "modelYear": year}, timeout=15)
+    resp   = requests.get(url, params={"make": make, "model": model, "modelYear": year}, timeout=15, verify=config.NHTSA_API_VERIFY_SSL)
     resp.raise_for_status()
     time.sleep(config.API_DELAY)
     results = resp.json().get("results", [])
@@ -97,11 +102,10 @@ def load_or_fetch_complaints(vehicles: list[tuple[str, str]]) -> pd.DataFrame:
         return pd.read_csv(cache)
 
     all_rows: list[dict] = []
-    for make, model in vehicles:
-        for year in config.YEARS_TO_TARGET:
+    for make, model in tqdm(vehicles, desc="Fetching complaints"):
+        for year in tqdm(config.YEARS_TO_TARGET, desc=f"{make} {model}", leave=False):
             rows = fetch_complaints_for_vehicle(make, model, year)
             all_rows.extend(rows)
-            print(f"  {make:<15} {model:<20} {year}  →  {len(rows):>4} complaints")
 
     df = pd.DataFrame(all_rows)
     if not df.empty:
